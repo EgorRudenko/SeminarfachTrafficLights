@@ -1,17 +1,24 @@
 import pygame
 import numpy as np
 from random import randint
-from decisionMaking import randomD
+from decisionMaking import decide
 
-pygame.init()
-screen = pygame.display.set_mode((1280, 720))
-clock = pygame.time.Clock()
-running = True
-time = 0
+decisionMethod = "random"       # how the traffic light's state is decided
+
+'''
+Options for now:
+"random"
+"oppositeWithTurns": horisontal to vertical, vertical to horizontal with turns always allowed
+'''
+
+decisionsMade = []      # descision matrix is a turple of matricies: (numbers of cars, lighterStates, descision)
+
+
 activeCars = 0
-
-citySize = (11,6) # width, heigth in trafficLight
-city = np.zeros((citySize[0],citySize[1]+1)) # city[row][column]
+running = True
+citySize = (11,6) # width, heigth in trafficLight. 11 is height however visually it looks like 5 because both vertical and horizontal are there
+city = np.zeros((citySize[0],citySize[1]+1)) # city[row][column] used primarily for coloring
+cityInput = np.zeros((citySize[0],citySize[1]+1)) # used for AI (how many cars are there on each street)
 trafficLights = np.zeros((citySize[0],citySize[1]+1, 3)) #  trafficLights[row][column][parameter]
 carsToGenerate = 20
 rng = np.random.default_rng()
@@ -32,6 +39,7 @@ class Street():
     toGo = True
 
 streetStates = []
+
 for i in range(citySize[0]):
     streetStates.append([])
     for j in range(citySize[1]+1):
@@ -39,15 +47,16 @@ for i in range(citySize[0]):
             streetStates[i].append(Street())
 
 class Car():
+    arrivalTime = None
     def __init__(self, x:int, y:int, xDest:int, yDest:int, i:int, birthTime:int):
         global streetStates
         self.x = x
         self.y = y
+        self.path = [(x, y)]
         self.birthTime = birthTime
         self.timeToGo = 0
         self.xDest = xDest
         self.yDest = yDest
-        self.arrivalTime = None
         self.queue = streetStates[y][x].cars # useless right now, as far as i can tell
         streetStates[y][x].cars += 1
         streetStates[y][x].carIndeces.append(i)
@@ -57,6 +66,7 @@ class Car():
             streetStates[self.y][self.x].cars -= 1
             streetStates[self.y][self.x].carIndeces.pop(0)
             self.x, self.y = a[0], a[1]
+            self.path.append((a[0], a[1]))
             streetStates[self.y][self.x].carIndeces.append(i)
             self.queue = streetStates[self.y][self.x].cars
             streetStates[self.y][self.x].cars += 1
@@ -68,13 +78,11 @@ class Car():
         self.timeToGo -= 1
         self.timeToGo = 0 if self.timeToGo < 0 else self.timeToGo
         return retMsg
-        
 
 cars = []
 carsWhichArrived = []
 
-
-def normalizeCoordinates(a:int, maxA:int) -> int: # actually normalize (+-infinity -> [0; maxA]) + round the result
+def normalizeCoordinates(a:int, maxA:int) -> int: # normalize (theorethical [-infinity; +infinity] from normal distribution -> [0; maxA]) + round the result
     if a > maxA:
         return maxA
     if a < 0:
@@ -105,6 +113,7 @@ def genCars(n:int, iter:int = 0) -> None:
         activeCars += 1
 
 genCars(carsToGenerate)
+
 def pss():  # print streets states
     for i in range(citySize[0]):
         for j in range(citySize[1]+1):
@@ -170,19 +179,19 @@ def move(x:int, y:int, DestX:int, DestY:int) -> list[int]:
             else:
                 return None
 
+def color(x:int):
+    greenPower = 150 # 0- 255
+    return (x*(x<0.5)*510+255*(x>=0.5),(255-(x-0.5)*510)*(x>=0.5)+greenPower*(x<0.5),0)
+
 '''
+# for checks of move() for one decision
 x,y = 4,2
 xDest, yDest = 0,0
 trafficLights[0][1] = (1,1,0)
 print(move(x,y,xDest,yDest))
 '''
-def color(x:int):
-    greenPower = 150 # 0- 255
-    return (x*(x<0.5)*510+255*(x>=0.5),(255-(x-0.5)*510)*(x>=0.5)+greenPower*(x<0.5),0)
-
-
 '''
-# this generates one car for checks how move works
+# this generates one car for checks how move() works for a long way (multiple decisions)
 x = 0
 y = 0
 city[y][x] = 1
@@ -206,9 +215,8 @@ def go():
 iter = 0 # artificial time (number of go() iterations)
 def go(): # move cars according to the rules
     global cars, streetStates, city, citySize, iter, activeCars
-    max = 2
+    max = 5     # used for coloring (what is considered red)
     iter += 1
-    print(iter)
 
     doWeGenerate = randint(0, 250000)
     if (iter - 500)**2 > doWeGenerate and iter < 1000:
@@ -232,44 +240,82 @@ def go(): # move cars according to the rules
                 if max != 0: 
                     streetStates[i][j].toGo = True
                     city[i][j] = (streetStates[i][j].cars/max) if (streetStates[i][j].cars/max) <= 1 else 1
-    
-#'''
-time = 0 # the real time
-while running:
-    # poll for events
-    # pygame.QUIT event means the user clicked X to close your window
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-    
-    time += clock.get_time()
-    if time >= 50:
-        if iter < 1250 or activeCars > 0:
-            go()
-        if not (iter < 1250 or activeCars > 0):
-            s = 0
-            for i in carsWhichArrived:
-                s += i.arrivalTime - i.birthTime
-            print(s/len(carsWhichArrived))
-        for i in range(citySize[1]+1):
-            for j in range(citySize[0]):
-                #trafficLights[j][i] = [not trafficLights[j][i][0], 1,1] # change traffic light signal every frame
-                #trafficLights[j][i] = lighterBaseState
-                trafficLights[j][i] = randomD()
-        time = 0
-    
-    # Draw stuff
-    screen.fill((20,20,20))
-    for i in range(citySize[0]):
-        for j in range(citySize[1]+1):
-            if i % 2 == 1:
-                pygame.draw.line(screen, color(city[i][j]),(5+j*30,5+(i//2)*30), (5+j*30,35+(i//2)*30), 2)
-            elif j != citySize[1]:  # horizontal
-                pygame.draw.line(screen, color(city[i][j]),(5+j*30,5+(i//2)*30), (35+j*30,5+(i//2)*30), 2)
+                    cityInput[i][j] = streetStates[i][j].cars
 
-    # flip() the display to put your work on screen
-    pygame.display.flip()
 
-    clock.tick(60)  # limits FPS to 60
+def logic():
+    global iter, activeCars, carsWhichArrived, activeCars, trafficLights, cityInput, running
+    if iter < 1250 or activeCars > 0:
+        go()
+    else:
+        running = False
+    
+    if iter % 100 == 0 or (activeCars == 0 and iter > 1000):
+        s = 0
+        if activeCars == 0 and iter > 1000:
+            activeCars = -1             # I just want to get one message
+        for i in carsWhichArrived:
+            s += i.arrivalTime - i.birthTime
+        try:
+            print(f"Final: {s/len(carsWhichArrived)}" if (activeCars == -1 and iter > 1000) else s/len(carsWhichArrived))
+        except:
+            print("Not sure what happened, but it probably is so bad, that after 100 iterations no car arrived")
+    aboutDescision = []
 
-pygame.quit()
+    # 3 Inputs
+    aboutDescision.append(iter)
+    aboutDescision.append(cityInput)
+    aboutDescision.append(trafficLights)
+    for i in range(citySize[1]+1):
+        for j in range(citySize[0]):
+            trafficLights[j][i] = decide(cityInput, (j,i), trafficLights[j][i], iter, method=decisionMethod)
+    # 1 output
+    aboutDescision.append(trafficLights)
+
+    decisionsMade.append(aboutDescision)
+
+
+
+def pygameAnimation():
+    global running
+    pygame.init()
+    screen = pygame.display.set_mode((1280, 720))
+    clock = pygame.time.Clock()
+
+    time = 0 # for drawing output (frame frequency)
+    lengthOfAFrame = 50
+
+    while running:
+        # poll for events
+        # pygame.QUIT event means the user clicked X to close your window
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+        
+        time += clock.get_time()
+        if time >= lengthOfAFrame:
+            logic()
+            time = 0
+        
+        # Draw stuff
+        screen.fill((20,20,20))
+        for i in range(citySize[0]):
+            for j in range(citySize[1]+1):
+                if i % 2 == 1:
+                    pygame.draw.line(screen, color(city[i][j]),(5+j*30,5+(i//2)*30), (5+j*30,35+(i//2)*30), 2)
+                elif j != citySize[1]:  # horizontal
+                    pygame.draw.line(screen, color(city[i][j]),(5+j*30,5+(i//2)*30), (35+j*30,5+(i//2)*30), 2)
+
+        # flip() the display to put your work on screen
+        pygame.display.flip()
+
+        clock.tick(60)  # limits FPS to 60
+
+    pygame.quit()
+
+def pureComputation():
+    while running:
+        logic()
+
+pygameAnimation()
+#pureComputation()
