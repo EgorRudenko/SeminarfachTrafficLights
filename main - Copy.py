@@ -3,7 +3,7 @@ import numpy as np
 from random import randint
 from decisionMaking import decide
 
-decisionMethod = "oppositeWithTurns"       # how the traffic light's state is decided
+decisionMethod = "random"       # how the traffic light's state is decided
 
 '''
 Options for now:
@@ -19,7 +19,7 @@ running = True
 citySize = (11,6) # width, heigth in trafficLight. 11 is height however visually it looks like 5 because both vertical and horizontal are there
 city = np.zeros((citySize[0],citySize[1]+1)) # city[row][column] used primarily for coloring
 cityInput = np.zeros((citySize[0],citySize[1]+1)) # used for AI (how many cars are there on each street)
-trafficLights = np.zeros((citySize[0]//2+1,citySize[1]+1, 3)) #  trafficLights[row][column][parameter]
+trafficLights = np.zeros((citySize[0],citySize[1]+1, 3)) #  trafficLights[row][column][parameter]
 carsToGenerate = 20
 rng = np.random.default_rng()
 lighterBaseState =[1,1,1]
@@ -30,7 +30,7 @@ for i in range(citySize[0]):
         city[i][citySize[1]] = None
 
 for i in range(citySize[1]+1):
-    for j in range(citySize[0]//2+1):
+    for j in range(citySize[0]):
        trafficLights[j][i] = [1,1,1]
 
 class Street():
@@ -146,7 +146,7 @@ def move(x:int, y:int, DestX:int, DestY:int) -> list[int]:
         diffY = DestY-y
         diffX = DestX-x
         trafficLight = directionY+(directionY==0)*(randint(0,1)*2-1)    # which traffic light to use more in case of dual possible choice or just direction
-        canMove = lightToDir(trafficLights[y//2+trafficLight][x])[1]      # possible movements according to traffic light
+        canMove = lightToDir(trafficLights[y+trafficLight][x])[1]      # possible movements according to traffic light
         if canMove[(directionX<0)*1] and canMove[(directionY>0)*2+(directionY<0)*3] and abs(diffY) > 1 and abs(diffX) > 1:  # if both directions are possible and make sense, we choose randomly
             r = randint(0,1)
             return (x+directionX*(directionX<0)*r,y+trafficLight*r+(not r)*2*directionY) 
@@ -164,7 +164,7 @@ def move(x:int, y:int, DestX:int, DestY:int) -> list[int]:
         diffX = DestX-x
         diffY = DestY-y
         trafficLight = directionX+(directionX==0)*((randint(0,1)*2-1)*(DestY%2==0)) + (directionX==0)*(-1)*(DestY%2==1)  # random one if the street is directly under car
-        canMove = lightToDir(trafficLights[y//2][x+trafficLight*(trafficLight>0)])[0]
+        canMove = lightToDir(trafficLights[y][x+trafficLight*(trafficLight>0)])[0]
         if directionY == 0:     # only movement in x direction is needed
             if canMove[0+1*(directionX<0)]:
                 return (x+directionX, y)
@@ -267,7 +267,7 @@ def logic():
     aboutDescision.append(cityInput)
     aboutDescision.append(trafficLights)
     for i in range(citySize[1]+1):
-        for j in range(citySize[0]//2+1):
+        for j in range(citySize[0]):
             trafficLights[j][i] = decide(cityInput, (j,i), trafficLights[j][i], iter, method=decisionMethod)
     # 1 output
     aboutDescision.append(trafficLights)
