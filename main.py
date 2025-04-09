@@ -3,12 +3,13 @@ import numpy as np
 from random import randint
 from decisionMaking import decide
 
-decisionMethod = "random"       # how the traffic light's state is decided
+decisionMethod = "smallReinforce"       # how the traffic light's state is decided
 
 '''
 Options for now:
 "random"
 "oppositeWithTurns": horisontal to vertical, vertical to horizontal with turns always allowed
+"smallReinforce"
 '''
 
 generateMoreCars = True # whether new cars should appear while simulation
@@ -243,7 +244,7 @@ def logic():
     aboutDescision.append(trafficLights)
     for i in range(citySize[1]+1):
         for j in range(citySize[0]//2+1):
-            trafficLights[j][i] = decide(cityInput, (j,i), trafficLights[j][i], iter, method=decisionMethod)
+            trafficLights[j][i] = decide(citySize, cityInput, (j,i), trafficLights[j][i], iter, method=decisionMethod)
     # 1 output
     aboutDescision.append(trafficLights)
 
