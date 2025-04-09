@@ -3,7 +3,7 @@ import numpy as np
 from random import randint
 from decisionMaking import decide
 
-decisionMethod = "oppositeWithTurns"       # how the traffic light's state is decided
+decisionMethod = "random"       # how the traffic light's state is decided
 
 '''
 Options for now:
@@ -11,18 +11,20 @@ Options for now:
 "oppositeWithTurns": horisontal to vertical, vertical to horizontal with turns always allowed
 '''
 
-decisionsMade = []      # descision matrix is a turple of matricies: (numbers of cars, lighterStates, descision)
+generateMoreCars = True # whether new cars should appear while simulation
+carsToGenerate = 20
+trafficLightBaseState =[1,1,1]      # doesn't actually change anything (how trafficLight is at the beginning plays almost no role later)
+carsForRed = 5
 
-
+decisionsMade = []      # descision matrix is a turple of matricies: (numbers of cars, trafficLights, descision/new traffic light state)
 activeCars = 0
 running = True
 citySize = (11,6) # width, heigth in trafficLight. 11 is height however visually it looks like 5 because both vertical and horizontal are there
 city = np.zeros((citySize[0],citySize[1]+1)) # city[row][column] used primarily for coloring
 cityInput = np.zeros((citySize[0],citySize[1]+1)) # used for AI (how many cars are there on each street)
 trafficLights = np.zeros((citySize[0]//2+1,citySize[1]+1, 3)) #  trafficLights[row][column][parameter]
-carsToGenerate = 20
 rng = np.random.default_rng()
-lighterBaseState =[1,1,1]
+
 
 
 for i in range(citySize[0]):
@@ -31,7 +33,7 @@ for i in range(citySize[0]):
 
 for i in range(citySize[1]+1):
     for j in range(citySize[0]//2+1):
-       trafficLights[j][i] = [1,1,1]
+       trafficLights[j][i] = trafficLightBaseState
 
 class Street():
     cars = 0
@@ -183,43 +185,14 @@ def color(x:int):
     greenPower = 150 # 0- 255
     return (x*(x<0.5)*510+255*(x>=0.5),(255-(x-0.5)*510)*(x>=0.5)+greenPower*(x<0.5),0)
 
-'''
-# for checks of move() for one decision
-x,y = 4,2
-xDest, yDest = 0,0
-trafficLights[0][1] = (1,1,0)
-print(move(x,y,xDest,yDest))
-'''
-'''
-# this generates one car for checks how move() works for a long way (multiple decisions)
-x = 0
-y = 0
-city[y][x] = 1
-xDest = 5
-yDest = 3
-city[yDest][xDest] = 0.5
-
-def go():
-    global x, y, xDest, yDest
-    city[y][x] = 0
-    newCoord = move(x, y, xDest, yDest)
-    if newCoord != None and newCoord != "already there":
-        x,y = move(x, y, xDest, yDest)
-    if newCoord == "already there":
-        print("already there")
-        xDest = randint(0, 5)
-        yDest = randint(0,10)
-        city[yDest][xDest] = 0.5
-    city[y][x] = 1
-'''
 iter = 0 # artificial time (number of go() iterations)
 def go(): # move cars according to the rules
-    global cars, streetStates, city, citySize, iter, activeCars
-    max = 5     # used for coloring (what is considered red)
+    global cars, streetStates, city, citySize, iter, activeCars, carsForRed
+    max = carsForRed     # used for coloring (what is considered red)
     iter += 1
 
     doWeGenerate = randint(0, 250000)
-    if (iter - 500)**2 > doWeGenerate and iter < 1000:
+    if (iter - 500)**2 > doWeGenerate and iter < 1000 and generateMoreCars:
         genCars(randint(0, 1), iter)
 
     for i in range(len(cars)):
@@ -227,6 +200,8 @@ def go(): # move cars according to the rules
             newCoord = move(cars[i].x, cars[i].y, cars[i].xDest, cars[i].yDest)
             if newCoord != None and newCoord != "already there":
                 cars[i].updateCoord(newCoord, i)
+            elif newCoord == None and cars[i].timeToGo != 0:
+                cars[i].timeToGo -= 1
             elif newCoord == "already there":
                 streetStates[cars[i].y][cars[i].x].cars -= 1
                 streetStates[cars[i].y][cars[i].x].carIndeces.remove(i)
@@ -275,7 +250,6 @@ def logic():
     decisionsMade.append(aboutDescision)
 
 
-
 def pygameAnimation():
     global running
     pygame.init()
@@ -299,12 +273,27 @@ def pygameAnimation():
         
         # Draw stuff
         screen.fill((20,20,20))
-        for i in range(citySize[0]):
+        for i in range(citySize[0]+1):
             for j in range(citySize[1]+1):
+                if i != citySize[0]:
+                    if i % 2 == 1:
+                        pygame.draw.line(screen, color(city[i][j]),(5+j*30,5+(i//2)*30), (5+j*30,35+(i//2)*30), 2)
+                    elif j != citySize[1]:  # horizontal
+                        pygame.draw.line(screen, color(city[i][j]),(5+j*30,5+(i//2)*30), (35+j*30,5+(i//2)*30), 2)
+                # do the traffic lights
                 if i % 2 == 1:
-                    pygame.draw.line(screen, color(city[i][j]),(5+j*30,5+(i//2)*30), (5+j*30,35+(i//2)*30), 2)
-                elif j != citySize[1]:  # horizontal
-                    pygame.draw.line(screen, color(city[i][j]),(5+j*30,5+(i//2)*30), (35+j*30,5+(i//2)*30), 2)
+                    if trafficLights[i//2][j][0] == 1: # horizontal
+                        pygame.draw.line(screen, (255,255,255), (0+j*30,5+(i//2)*30), (10+j*30,5+(i//2)*30), 5)
+                        if trafficLights[i//2][j][1] == 1:
+                            pygame.draw.line(screen, (255,255,255), (5+j*30,10+(i//2)*30), (5+j*30,15+(i//2)*30), 5)
+                        if trafficLights[i//2][j][2] == 1:
+                            pygame.draw.line(screen, (255,255,255), (5+j*30,0+(i//2)*30), (5+j*30,-5+(i//2)*30), 5)
+                    else:
+                        pygame.draw.line(screen, (255,255,255), (5+j*30,0+(i//2)*30), (5+j*30,10+(i//2)*30), 5)
+                        if trafficLights[i//2][j][1] == 1:
+                            pygame.draw.line(screen, (255,255,255), (10+j*30,5+(i//2)*30), (15+j*30,5+(i//2)*30), 5)
+                        if trafficLights[i//2][j][2] == 1:
+                            pygame.draw.line(screen, (255,255,255), (0+j*30,5+(i//2)*30), (-5+j*30,5+(i//2)*30), 5)
 
         # flip() the display to put your work on screen
         pygame.display.flip()

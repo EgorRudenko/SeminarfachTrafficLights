@@ -1,0 +1,32 @@
+Alternative go() function for testing:
+
+'''
+# for checks of move() for one decision
+x,y = 4,2
+xDest, yDest = 0,0
+trafficLights[0][1] = (1,1,0)
+print(move(x,y,xDest,yDest))
+'''
+'''
+# this generates one car for checks how move() works for a long way (multiple decisions)
+x = 0
+y = 0
+city[y][x] = 1
+xDest = 5
+yDest = 3
+city[yDest][xDest] = 0.5
+iter = 0
+def go():
+    global x, y, xDest, yDest, iter
+    city[y][x] = 0
+    iter+=1
+    newCoord = move(x, y, xDest, yDest)
+    if newCoord != None and newCoord != "already there":
+        x,y = move(x, y, xDest, yDest)
+    if newCoord == "already there":
+        print("already there")
+        xDest = randint(0, 5)
+        yDest = randint(0,10)
+        city[yDest][xDest] = 0.5
+    city[y][x] = 1
+'''
