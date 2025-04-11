@@ -2,6 +2,7 @@ import pygame
 import numpy as np
 from random import randint
 from decisionMaking import decide
+from decisionMaking import learn
 
 decisionMethod = "smallReinforce"       # how the traffic light's state is decided
 
@@ -17,6 +18,7 @@ carsToGenerate = 20
 trafficLightBaseState =[1,1,1]      # doesn't actually change anything (how trafficLight is at the beginning plays almost no role later)
 carsForRed = 5
 
+rewards = [0]*5000      # 2000 is chosen arbitrarily, I just hope, that no algorithm takes more then 2000 iterations to complete. If it does, I will get IndexError
 decisionsMade = []      # descision matrix is a turple of matricies: (numbers of cars, trafficLights, descision/new traffic light state)
 activeCars = 0
 running = True
@@ -204,6 +206,7 @@ def go(): # move cars according to the rules
             elif newCoord == None and cars[i].timeToGo != 0:
                 cars[i].timeToGo -= 1
             elif newCoord == "already there":
+                rewards[iter] += 10
                 streetStates[cars[i].y][cars[i].x].cars -= 1
                 streetStates[cars[i].y][cars[i].x].carIndeces.remove(i)
                 carsWhichArrived.append(cars[i])
@@ -221,21 +224,39 @@ def go(): # move cars according to the rules
 
 def logic():
     global iter, activeCars, carsWhichArrived, activeCars, trafficLights, cityInput, running
-    if iter < 1250 or activeCars > 0:
+    if iter < 1000 or activeCars > 0:
         go()
     else:
         running = False
     
     if iter % 100 == 0 or (activeCars == 0 and iter > 1000):
         s = 0
+        #print(activeCars, iter, iter < 1000 or activeCars > 0, running)
         if activeCars == 0 and iter > 1000:
             activeCars = -1             # I just want to get one message
+        max = 0
+        min = 1000000
         for i in carsWhichArrived:
-            s += i.arrivalTime - i.birthTime
+            travelTime = i.arrivalTime - i.birthTime
+            s += travelTime
+            if travelTime < min:
+                min = travelTime
+            if travelTime > max:
+                max = travelTime
         try:
-            print(f"Final: {s/len(carsWhichArrived)}" if (activeCars == -1 and iter > 1000) else s/len(carsWhichArrived))
+            average = s/len(carsWhichArrived)
+            median = (min+max)/2
         except:
-            print("Not sure what happened, but it probably is so bad, that after 100 iterations no car arrived")
+            average = "division by 0"
+            median = "does not exist yet"
+        if (activeCars == -1 and iter > 1000):
+            print(f"Final average: {average}\nFinal median: {median}\nFinal max: {max}")
+            learn(rewards)
+        else:
+            try:
+                print(f"Average: {average}\nMedian: {median}\nMax: {max}")
+            except:
+                print("Not sure what happened, but it probably is so bad, that after 100 iterations no car arrived")
     aboutDescision = []
 
     # 3 Inputs
@@ -258,7 +279,7 @@ def pygameAnimation():
     clock = pygame.time.Clock()
 
     time = 0 # for drawing output (frame frequency)
-    lengthOfAFrame = 50
+    lengthOfAFrame = 0
 
     while running:
         # poll for events
@@ -304,8 +325,9 @@ def pygameAnimation():
     pygame.quit()
 
 def pureComputation():
+    global running
     while running:
         logic()
 
-pygameAnimation()
-#pureComputation()
+#pygameAnimation()
+pureComputation()
