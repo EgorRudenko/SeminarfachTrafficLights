@@ -30,7 +30,7 @@ for i in range(100):
                 #des = decisionMaking.decide((11,6), cityInput, (randint(1,5), randint(1,5)), (a,1,1), randint(1,6000), method="smallReinforce")
                 des = decisionMaking.decide((11,6), cityInput, (j, k), (a,1,1), o%101, method="smallReinforce")
                 if des[0] != a and des[1] == 1 and des[2] == 1:
-                    rewards[o][j][k] += 10
+                    rewards[o%101][j][k] += 10
                 #else:
                     #rewards[o][j][k] -= 1
                     #rewards[o] += 10

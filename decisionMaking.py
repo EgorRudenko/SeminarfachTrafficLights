@@ -10,12 +10,13 @@ rng = np.random.default_rng(seed = 1)
 class ReinforceSmall():
     # configs:
     rewardDecayRate = 0.9
-    alpha = 0.1          # learning rate
+    alpha = 0.01          # learning rate
     decay_rmsprop = 0.9
     mem = 10000
-    bias_alpha = 0.1
+    bias_alpha = 0.01
     reluCoeff = 0.01
     exploration = 1.5
+    gradClip = 1
 
     rmsprop_cache = []
     # non-config variables
@@ -73,21 +74,21 @@ class ReinforceSmall():
         inputs.append(pos[1]/dimensions[1])
         inputs = np.array(inputs)
         #print(inputs)
-        h1 = np.dot(self.model["W1"],inputs+self.biases[0])
+        h1 = np.dot(self.model["W1"],inputs+self.biases[0])+self.biases[1]
         h1[h1 < 0] *= self.reluCoeff
-        h2 = np.dot(self.model["W2"], h1+self.biases[1])
+        h2 = np.dot(self.model["W2"], h1)+self.biases[2]
         h2[h2 < 0] *= self.reluCoeff
-        h3 = np.dot(self.model["W3"], h2+self.biases[2])
+        h3 = np.dot(self.model["W3"], h2)+self.biases[3]
         h3[h3 < 0] *= self.reluCoeff
-        o = np.dot(self.model["W4"], h3+self.biases[3])
-        o = list(map(self.sigmoid, o+self.biases[4]))
+        o = np.dot(self.model["W4"], h3)+self.biases[4]
+        o = list(map(self.sigmoid, o))
         if learningSave:
             self.iterh.append(iter)
             self.ih.append(inputs+self.biases[0])
             self.h1h.append(h1+self.biases[1])
             self.h2h.append(h2+self.biases[2])
             self.h3h.append(h3+self.biases[3])
-            self.oh.append(o+self.biases[4])
+            self.oh.append(o)
         return o
     
     def discount_rewards(self, rewards):
@@ -111,6 +112,9 @@ class ReinforceSmall():
 
         grads = grads.reshape(int(grads.size/3),3)
         for i in range(len(self.ih)):
+            if grads[i][0] != 0 and self.oh[i][2] > 0.99:
+                pass
+                #print(self.ih[i], grads[i], self.oh[i])
             grad = np.array([grads[i]])
             so += grad
             dw4 += np.dot(grad.T, np.array([self.h3h[i]]))
@@ -148,29 +152,40 @@ class ReinforceSmall():
             print(f"average descision: {self.sumOfDescisions1 / self.descisionsMade}")
             print(f"Max reward: {np.max(rewards)}; Min reward: {np.min(rewards)}; Average reward: {np.average(np.trim_zeros(rewards))}")
             print("learining...")
-        #popa = 0
-        #while rewards.flatten()[popa] == 0 and popa < 10:
+        if rewards.any():
+            popa = np.nonzero(rewards.flatten())[0][0]
+            print("popa: ", popa)
+        else:
+            popa = 0
+        #print(rewards.any())
+        #while rewards.flatten()[popa] == 0 and popa < 100:
         #    popa+=1
         #print(np.trim_zeros(self.gh))
-        #print("grads: ", self.gh.reshape((int(self.gh.size/3), 3))[popa])
-        #print("rewar: ", rewards.flatten()[popa], len(self.oh), popa)
-        #print("outpu: ", self.oh[popa])
-        #print("actio: ", self.ah[popa])
-        if not np.any(rewards):
+        #print(np.trim_zeros(rewards.flatten()))
+        print("grads: ", self.gh.reshape((int(self.gh.size/3), 3))[popa])
+        print("rewar: ", rewards.flatten()[popa])
+        print("input: ", self.ih[popa])
+        print("outpu: ", self.oh[popa])
+        print("actio: ", self.ah[popa])
+        if np.any(rewards):
             rewards -= np.mean(rewards) 
-            rewards /= np.std(rewards)
+            if np.std(rewards) != 0:
+                rewards /= np.std(rewards)
         #rewards /= 1000  
         for i in range(len(self.gh)):
             for j in range(len(self.gh[i])):
                 for k in range(len(self.gh[i][j])):
+                    if rewards[i][j][k] != 0:
+                        pass
+                        #print(self.gh[i][j][k],rewards[i][j][k])
                     self.gh[i][j][k] = self.gh[i][j][k]*rewards[i][j][k]
         if mode == "vocal":
             print("prepare to do gradients...")
         deltas, bias_deltas = self.back_propagation(self.gh)
         for k, v in deltas.items():
             #deltas[k] /= np.std(deltas[k])
-            deltas[k][deltas[k] > 1] = 1
-            deltas[k][deltas[k] < -1] = -1
+            deltas[k][deltas[k] > self.gradClip] = self.gradClip
+            deltas[k][deltas[k] < -self.gradClip] = -self.gradClip
         
         for i in range(len(bias_deltas)):
             self.biases[i] += bias_deltas[i].flatten()*self.bias_alpha
@@ -220,7 +235,7 @@ class ReinforceSmall():
 
 
 
-smallReinforce = ReinforceSmall(10, 10, 5, 4, 3)
+smallReinforce = ReinforceSmall(10, 30, 10, 5, 3)
 
 def learn(rewards, mode = "vocal", model="smallReinforce"):
     global smallReinforce
