@@ -152,21 +152,21 @@ class ReinforceSmall():
             print(f"average descision: {self.sumOfDescisions1 / self.descisionsMade}")
             print(f"Max reward: {np.max(rewards)}; Min reward: {np.min(rewards)}; Average reward: {np.average(np.trim_zeros(rewards))}")
             print("learining...")
-        if rewards.any():
-            popa = np.nonzero(rewards.flatten())[0][0]
-            print("popa: ", popa)
-        else:
-            popa = 0
+        #if rewards.any():
+        #    popa = np.nonzero(rewards.flatten())[0][0]
+        #    print("popa: ", popa)
+        #else:
+        #    popa = 0
         #print(rewards.any())
         #while rewards.flatten()[popa] == 0 and popa < 100:
         #    popa+=1
         #print(np.trim_zeros(self.gh))
         #print(np.trim_zeros(rewards.flatten()))
-        print("grads: ", self.gh.reshape((int(self.gh.size/3), 3))[popa])
-        print("rewar: ", rewards.flatten()[popa])
-        print("input: ", self.ih[popa])
-        print("outpu: ", self.oh[popa])
-        print("actio: ", self.ah[popa])
+        #print("grads: ", self.gh.reshape((int(self.gh.size/3), 3))[popa])
+        #print("rewar: ", rewards.flatten()[popa])
+        #print("input: ", self.ih[popa])
+        #print("outpu: ", self.oh[popa])
+        #print("actio: ", self.ah[popa])
         if np.any(rewards):
             rewards -= np.mean(rewards) 
             if np.std(rewards) != 0:
