@@ -8,6 +8,7 @@ from decisionMaking import learn
 decisionMethod = "oppositeWithTurns"       # how the traffic light's state is decided
 graphicMode = True
 showTrafficLights = False
+startValueOfTheRunningAverage = 800
 '''
 Options for now:
 "random"
@@ -269,7 +270,7 @@ def go(): # move cars according to the rules
                     cityInput[i][j] = streetStates[i][j].cars
 
 
-running_average = 800
+running_average = startValueOfTheRunningAverage
 decay = 0.99
 running_average_max = 0
 
