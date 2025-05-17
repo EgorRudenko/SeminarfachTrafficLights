@@ -13,4 +13,5 @@ $pip install -r requirements.txt$
 to start:  
 $python main.py$  
   
-# Some things can be configured by changing values of variables at the top of main.py  
+# Other  
+Some things can be configured by changing values of variables at the top of main.py  
