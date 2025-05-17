@@ -5,21 +5,22 @@ from decisionMaking import decide
 from decisionMaking import learn
 
 
-decisionMethod = "smallReinforce"       # how the traffic light's state is decided
-
+decisionMethod = "oppositeWithTurns"       # how the traffic light's state is decided
+graphicMode = True
+showTrafficLights = False
 '''
 Options for now:
 "random"
 "oppositeWithTurns": horisontal to vertical, vertical to horizontal with turns always allowed
 "smallReinforce"
 '''
-showTrafficLights = True
+
 trafficLightWidth = 5
 mem = 10000
 generateMoreCars = True # whether new cars should appear while simulation
 carsToGenerate = 20
 trafficLightBaseState =[1,1,1]      # doesn't actually change anything (how trafficLight is at the beginning plays almost no role later)
-carsForRed = 5
+carsForRed = 5                      # how many cars on a street for it to appear red
 
 
 
@@ -408,8 +409,10 @@ def pureComputation():
 
 while True:
     initialize()
-    pureComputation()
     #print(f'''{streetStates[1][1].cars} \n{streetStates[1][1].carIndeces}\n{activeCars}''')
-    #pygameAnimation()
+    if graphicMode:
+        pygameAnimation()
+    else:
+        pureComputation()
     print("----------------New Iteration--------------------")
     
