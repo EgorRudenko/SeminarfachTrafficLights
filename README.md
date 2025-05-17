@@ -1,3 +1,4 @@
+Important: python 3.10 or higher is a requirement for this project
 # Installation with virtual environment
 From Powershell in Windows in the project directory:  
 ```python -m venv venv```  
