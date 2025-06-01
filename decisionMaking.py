@@ -10,10 +10,10 @@ rng = np.random.default_rng(seed = 1)
 class ReinforceSmall():
     # configs:
     rewardDecayRate = 0.9
-    alpha = 0.01          # learning rate
+    alpha = 0.0001          # learning rate
     decay_rmsprop = 0.9
     mem = 10000
-    bias_alpha = 0.01
+    bias_alpha = 0.0001
     reluCoeff = 0.01
     exploration = 1.5
     gradClip = 1
@@ -29,6 +29,7 @@ class ReinforceSmall():
         self.oh = []                 # output layer  history
         self.ah = []                 # actions history (they are in part random)
         self.gh = []                 # gradient of cross-entropy history
+        self.gh1 = []
         self.descisionsMade = 0
         self.sumOfDescisions = np.array([0.0,0.0,0.0])
         self.sumOfDescisions1 = np.array([0.0,0.0,0.0])
@@ -110,7 +111,7 @@ class ReinforceSmall():
         sh2 = np.zeros((1,self.H2))
         so = np.zeros((1,self.O))
 
-        grads = grads.reshape(int(grads.size/3),3)
+        #grads = grads.reshape(int(grads.size/3),3)
         for i in range(len(self.ih)):
             if grads[i][0] != 0 and self.oh[i][2] > 0.99:
                 pass
@@ -146,42 +147,25 @@ class ReinforceSmall():
         return {"W1":dw1,"W2":dw2,"W3":dw3,"W4":dw4}, [si, sh, sh1, sh2, so]
 
     def learn(self, rewards:list, mode):
-        print(rewards.shape)
+        #print(rewards.shape)
         if mode == "vocal":
             print(f"average certainty: {2*self.sumOfDescisions / self.descisionsMade}")
             print(f"average descision: {self.sumOfDescisions1 / self.descisionsMade}")
             print(f"Max reward: {np.max(rewards)}; Min reward: {np.min(rewards)}; Average reward: {np.average(np.trim_zeros(rewards))}")
             print("learining...")
-        #if rewards.any():
-        #    popa = np.nonzero(rewards.flatten())[0][0]
-        #    print("popa: ", popa)
-        #else:
-        #    popa = 0
-        #print(rewards.any())
-        #while rewards.flatten()[popa] == 0 and popa < 100:
-        #    popa+=1
-        #print(np.trim_zeros(self.gh))
-        #print(np.trim_zeros(rewards.flatten()))
-        #print("grads: ", self.gh.reshape((int(self.gh.size/3), 3))[popa])
-        #print("rewar: ", rewards.flatten()[popa])
-        #print("input: ", self.ih[popa])
-        #print("outpu: ", self.oh[popa])
-        #print("actio: ", self.ah[popa])
         if np.any(rewards):
             rewards -= np.mean(rewards) 
-            if np.std(rewards) != 0:
-                rewards /= np.std(rewards)
-        #rewards /= 1000  
-        for i in range(len(self.gh)):
-            for j in range(len(self.gh[i])):
-                for k in range(len(self.gh[i][j])):
-                    if rewards[i][j][k] != 0:
-                        pass
-                        #print(self.gh[i][j][k],rewards[i][j][k])
-                    self.gh[i][j][k] = self.gh[i][j][k]*rewards[i][j][k]
+            rewards /= np.std(rewards)
+        print(len(self.gh1), len(rewards))
+        for i in range(len(self.gh1)-1):
+            self.gh1[i] = self.gh1[i]*rewards[i]
+        #for i in range(len(self.gh)):
+        #    for j in range(len(self.gh[i])):
+        #        for k in range(len(self.gh[i][j])):
+        #            self.gh[i][j][k] = self.gh[i][j][k]*rewards[i][j][k]
         if mode == "vocal":
             print("prepare to do gradients...")
-        deltas, bias_deltas = self.back_propagation(self.gh)
+        deltas, bias_deltas = self.back_propagation(self.gh1)
         for k, v in deltas.items():
             #deltas[k] /= np.std(deltas[k])
             deltas[k][deltas[k] > self.gradClip] = self.gradClip
@@ -229,6 +213,7 @@ class ReinforceSmall():
                 gradient_of_cross_entropy.append(actions[i]-aprob[i])
             #print(self.gh)
             #print("-------------------------------", gradient_of_cross_entropy, actions, aprob)
+            self.gh1.append(np.array(gradient_of_cross_entropy))
             self.gh[iter][pos[0]][pos[1]] = gradient_of_cross_entropy
 
         return actions

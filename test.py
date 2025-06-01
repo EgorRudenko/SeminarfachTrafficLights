@@ -17,30 +17,28 @@ cityInput = cityInput = np.array([
     [0., 0., 0., 0., 0., 0., 0.,]])
 print(cityInput)
 
-
-
+ah = []
 for i in range(100):
-    rewards = np.zeros((10000,11//2+1,6+1))
+    rewards = []
+    #rewards = np.zeros((10000,11//2+1,6+1))
     #rewards = rewards.flatten()
     for o in range(9999):
-        rewards = np.zeros((10000,11//2+1,6+1))
         for j in range(11//2+1):
             for k in range(6+1):
                 a = randint(0,1)
-                #des = decisionMaking.decide((11,6), cityInput, (randint(1,5), randint(1,5)), (a,1,1), randint(1,6000), method="smallReinforce")
                 des = decisionMaking.decide((11,6), cityInput, (j, k), (a,1,1), o%101, method="smallReinforce")
-                if des[0] != a and des[1] == 1 and des[2] == 1:
-                    rewards[o%101][j][k] += 10
-                #else:
-                    #rewards[o][j][k] -= 1
-                    #rewards[o] += 10
-                #if des[1] == 1:
-                 #   rewards[o][j][k] += 10
-                    #rewards[o] += 10
-                #if des[2] == 1:
-                 #   rewards[o][j][k] += 10
-                    #rewards[o] += 10
-        if o % 100 == 0:
+                ah.append(des)
+                if des[0] != a and des[1] == 1 and des[2] == 0:
+                    rewards.append(10)
+                else:
+                    rewards.append(0)
+
+        if (o+1) % 100 == 0:
+            print(len(ah), len(rewards))
+            ah = []
             decisionMaking.learn(rewards)
-    #rewards = np.reshape(rewards, (101,11//2+1,6+1))
-    
+            rewards = []
+    print(len(ah), len(rewards))
+    ah = []
+    decisionMaking.learn(rewards)
+    rewards = []
