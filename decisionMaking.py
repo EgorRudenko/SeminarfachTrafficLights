@@ -15,7 +15,7 @@ class ReinforceSmall():
     mem = 10000
     bias_alpha = 0.0001
     reluCoeff = 0.01
-    exploration = 1.5
+    exploration = 1
     gradClip = 1
 
     rmsprop_cache = []
@@ -113,8 +113,9 @@ class ReinforceSmall():
 
         #grads = grads.reshape(int(grads.size/3),3)
         for i in range(len(self.ih)):
-            if grads[i][0] != 0 and self.oh[i][2] > 0.99:
+            if grads[i][0] != 0:
                 pass
+                #print(self.ah[i], self.oh[i], grads[i])
                 #print(self.ih[i], grads[i], self.oh[i])
             grad = np.array([grads[i]])
             so += grad
@@ -154,7 +155,7 @@ class ReinforceSmall():
             print(f"Max reward: {np.max(rewards)}; Min reward: {np.min(rewards)}; Average reward: {np.average(np.trim_zeros(rewards))}")
             print("learining...")
         if np.any(rewards):
-            rewards -= np.mean(rewards) 
+            #rewards -= np.mean(rewards) 
             rewards /= np.std(rewards)
         print(len(self.gh1), len(rewards))
         for i in range(len(self.gh1)-1):

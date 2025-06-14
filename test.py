@@ -18,7 +18,7 @@ cityInput = cityInput = np.array([
 print(cityInput)
 
 ah = []
-for i in range(100):
+for i in range(1000):
     rewards = []
     #rewards = np.zeros((10000,11//2+1,6+1))
     #rewards = rewards.flatten()
@@ -28,7 +28,7 @@ for i in range(100):
                 a = randint(0,1)
                 des = decisionMaking.decide((11,6), cityInput, (j, k), (a,1,1), o%101, method="smallReinforce")
                 ah.append(des)
-                if des[0] != a and des[1] == 1 and des[2] == 0:
+                if des[0] == a and des[1] == 1 and des[2] == 1:
                     rewards.append(10)
                 else:
                     rewards.append(0)
