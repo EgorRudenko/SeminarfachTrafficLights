@@ -3,15 +3,16 @@ import numpy as np
 from scipy import stats
 
 
-seed(2)
-np.random.seed(2)
-
+seed(5)
+np.random.seed(5)
 rng = np.random.default_rng(seed = 1) 
+
+
 class ReinforceSmall():
     # configs:
     rewardDecayRate = 0.9
     alpha = 0.0001          # learning rate
-    decay_rmsprop = 0.9
+    decay_rmsprop = 0.99
     mem = 10000
     bias_alpha = 0.0001
     reluCoeff = 0.01
@@ -74,7 +75,7 @@ class ReinforceSmall():
         inputs.append(pos[0]/dimensions[0])
         inputs.append(pos[1]/dimensions[1])
         inputs = np.array(inputs)
-        #print(inputs)
+        inputs = np.array([0,0,0,0,inputs[4], inputs[5], inputs[6], 0, 0, 0])
         h1 = np.dot(self.model["W1"],inputs+self.biases[0])+self.biases[1]
         h1[h1 < 0] *= self.reluCoeff
         h2 = np.dot(self.model["W2"], h1)+self.biases[2]
@@ -113,10 +114,9 @@ class ReinforceSmall():
 
         #grads = grads.reshape(int(grads.size/3),3)
         for i in range(len(self.ih)):
-            if grads[i][0] != 0:
+            if grads[i][0] < 0 and abs(self.oh[i][0]-.5)>.4:
                 pass
-                #print(self.ah[i], self.oh[i], grads[i])
-                #print(self.ih[i], grads[i], self.oh[i])
+                #print(self.ih[i], grads[i], self.oh[i], self.ah[i],sep="\n", end="\n\n")
             grad = np.array([grads[i]])
             so += grad
             dw4 += np.dot(grad.T, np.array([self.h3h[i]]))
@@ -126,14 +126,14 @@ class ReinforceSmall():
             sh2 += h3
             dw3 += np.dot(h3.T, np.array([self.h2h[i]]))
 
-            h2 = np.dot(h3, self.model["W3"])
+            h2 = np.dot(h3, self.model["W3"]) 
             h2[h2<0] *= self.reluCoeff
             sh1 += h2
             dw2 += np.dot(h2.T, np.array([self.h1h[i]]))
 
             h1 = np.dot(h2, self.model["W2"])
-            sh += h1
             h1[h1<0] *= self.reluCoeff
+            sh += h1
             dw1 += np.dot(h1.T, np.array([self.ih[i]]))
         dw1 /= len(self.ih)
         dw2 /= len(self.ih)
@@ -155,9 +155,9 @@ class ReinforceSmall():
             print(f"Max reward: {np.max(rewards)}; Min reward: {np.min(rewards)}; Average reward: {np.average(np.trim_zeros(rewards))}")
             print("learining...")
         if np.any(rewards):
-            #rewards -= np.mean(rewards) 
+            rewards -= np.mean(rewards) 
             rewards /= np.std(rewards)
-        print(len(self.gh1), len(rewards))
+        #print(len(self.gh1), len(rewards))
         for i in range(len(self.gh1)-1):
             self.gh1[i] = self.gh1[i]*rewards[i]
         #for i in range(len(self.gh)):
@@ -174,11 +174,16 @@ class ReinforceSmall():
         
         for i in range(len(bias_deltas)):
             self.biases[i] += bias_deltas[i].flatten()*self.bias_alpha
-            
+        #print(self.biases)    
 
         if mode == "vocal":
             #print("Gradients: ", deltas)
             #print("Weights: ", self.model)
+            delt = []
+            for k,v in deltas.items():
+                delt += list(v.flatten())
+            delt = np.array(delt)
+            print(f"Grads info: Mean = {np.mean(delt)}; Standart deviation = {np.std(delt)}")
             print("gradients done, applying gradients...")
         # apply gradients with rmsprop
         for k, v in self.model.items():
@@ -221,7 +226,9 @@ class ReinforceSmall():
 
 
 
-smallReinforce = ReinforceSmall(10, 30, 10, 5, 3)
+smallReinforce = ReinforceSmall(10, 10, 10, 5, 3)
+
+
 
 def learn(rewards, mode = "vocal", model="smallReinforce"):
     global smallReinforce
@@ -229,7 +236,7 @@ def learn(rewards, mode = "vocal", model="smallReinforce"):
         case "smallReinforce":
             smallReinforce.learn(rewards, mode)
 
-def decide(dimensions, city, pos, currState, iter:int, method:str="randomD"):
+def decide(dimensions, city, pos, currState, iter:int, method:str="randomD")->list|tuple:
     global smallReinforce
     match method:
         case "random":
@@ -238,6 +245,7 @@ def decide(dimensions, city, pos, currState, iter:int, method:str="randomD"):
             return alwaysChangeWithTurns(currState)
         case "smallReinforce":  
             return smallReinforce.decide(city, currState, iter, pos, dimensions, True)
+    return (None, None)
 
 def random():
     return [randint(0,1),randint(0,1),randint(0,1)]

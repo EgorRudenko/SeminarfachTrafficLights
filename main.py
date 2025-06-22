@@ -68,7 +68,7 @@ class Car():
         self.queue = streetStates[y][x].cars # useless right now, as far as i can tell
         streetStates[y][x].cars += 1
         streetStates[y][x].carIndeces.append(i)
-    def updateCoord(self, a:list, i:int, trafficLight)->None:
+    def updateCoord(self, a:list, i:int, trafficLight)->None|str:
         global streetStates, check, rewards
         if streetStates[self.y][self.x].carIndeces[0] == i and streetStates[self.y][self.x].toGo and self.timeToGo <= 0:
             # reward depends on amount of unnecesary time I had to wait (because there were cars in front of me)
@@ -184,7 +184,7 @@ def lightToDir(l:list[int]) -> list[list[int]]:  # transform light state e.g [0,
     return [h,v]
 
 # legendary piece of shitcode
-def move(x:int, y:int, DestX:int, DestY:int) -> list[int]:
+def move(x:int, y:int, DestX:int, DestY:int) -> list:
     if x == DestX and y == DestY: return ["already there", None]
     if y%2 == 1:    # we are on a vertical line
         directionY = np.sign(DestY-y)
